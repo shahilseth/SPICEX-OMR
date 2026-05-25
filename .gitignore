@@ -9,3 +9,5 @@ node_modules
 # Build outputs
 dist
 .vercel
+.next
+tsconfig.tsbuildinfo

@@ -37,6 +37,8 @@ CREATE TABLE purchase_orders (
   rate_per_kg NUMERIC NOT NULL,
   material_type material_type NOT NULL,
   expected_delivery_date DATE,
+  notes TEXT,
+  po_number TEXT UNIQUE,
   status TEXT DEFAULT 'CREATED',
   created_at TIMESTAMP DEFAULT now()
 );
