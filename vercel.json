@@ -1,14 +1,4 @@
 {
-  "experimentalServices": {
-    "frontend": {
-      "root": "frontend",
-      "routePrefix": "/",
-      "framework": "nextjs"
-    },
-    "backend": {
-      "root": "backend",
-      "entrypoint": "src/index.ts",
-      "routePrefix": "/_/backend"
-    }
-  }
+  "framework": "nextjs",
+  "rootDirectory": "frontend"
 }
