@@ -8,7 +8,7 @@
 
 ![SpiceX OMS Dashboard](./dashboard.png)
 
-Live Demo: https://spicex-oms.vercel.app/dashboard
+Live Demo: https://spicex-oms.vercel.app
 
 ---
 
