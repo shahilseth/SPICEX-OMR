@@ -83,37 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProfile]);
 
-  // Initialize session on mount
+  // Initialize session on mount.
+  // Use ONLY onAuthStateChange — it always fires INITIAL_SESSION on first call,
+  // which is the correct Supabase v2 pattern. Calling getSession() in parallel
+  // creates a race condition where both try to refresh the same token simultaneously,
+  // causing the refresh request to hang indefinitely.
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Race against a 8s timeout so a paused/unreachable Supabase project
-        // doesn't leave the app stuck on the loading spinner forever.
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Auth timeout — Supabase may be paused')), 8000)
-          ),
-        ]);
-
-        const initialSession = (sessionResult as any)?.data?.session ?? null;
-
-        if (initialSession?.user) {
-          setUser(initialSession.user);
-          setSession(initialSession);
-          const p = await fetchProfile(initialSession.user.id);
-          setProfile(p);
-        }
-      } catch (err) {
-        console.error('Auth initialization error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
@@ -126,9 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
 
-        if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        }
+        // Mark loading done after the first auth state is received.
+        // INITIAL_SESSION fires immediately on listener registration.
+        setLoading(false);
       }
     );
 
