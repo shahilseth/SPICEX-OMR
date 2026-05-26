@@ -70,7 +70,7 @@ export default function ConnectionTestPanel() {
         : 'Profile not found. Check if profiles table exists and trigger is set up.',
     });
 
-    // Test 4: Express Backend
+    // Test 4: Express Backend (optional — dashboard works without it)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/api/skus`);
       if (res.ok) {
@@ -83,33 +83,33 @@ export default function ConnectionTestPanel() {
         testResults.push({
           name: 'Express Backend',
           status: 'fail',
-          detail: `HTTP ${res.status} — is the backend running?`,
+          detail: `HTTP ${res.status} — run the backend with: cd backend && npm run dev`,
         });
       }
     } catch (err: any) {
       testResults.push({
         name: 'Express Backend',
         status: 'fail',
-        detail: `Cannot reach backend: ${err.message}`,
+        detail: `Not running (optional for dashboard). Start with: cd backend && npm run dev`,
       });
     }
 
     // Test 5: Cross-module data connectivity (PO → GRN)
     try {
-      const { data: pos, error: poErr } = await supabase.from('purchase_orders').select('id, po_number').limit(1);
+      const { data: pos, error: poErr } = await supabase.from('purchase_orders').select('id, product').limit(1);
       if (poErr) throw poErr;
       if (pos && pos.length > 0) {
-        const { data: grns, error: grnErr } = await supabase
+        const { data: grns } = await supabase
           .from('grns')
-          .select('id, po_id, purchase_orders(po_number)')
+          .select('id, po_id')
           .eq('po_id', pos[0].id)
           .limit(1);
         testResults.push({
           name: 'Data Connectivity (PO → GRN)',
           status: 'pass',
           detail: grns && grns.length > 0
-            ? `GRN found linked to ${pos[0].po_number}`
-            : `PO ${pos[0].po_number} exists. No GRN yet — that's fine, FK is ready.`,
+            ? `GRN found linked to PO for ${pos[0].product}`
+            : `PO for "${pos[0].product}" exists. No GRN yet — FK is ready.`,
         });
       } else {
         testResults.push({
