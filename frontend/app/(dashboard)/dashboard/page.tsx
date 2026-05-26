@@ -21,44 +21,54 @@ export default function DashboardPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        const safeCount = async (query: PromiseLike<{ count: number | null; error: any }>): Promise<number> => {
+            try {
+                const { count, error } = await query;
+                if (error) return 0;
+                return count ?? 0;
+            } catch {
+                return 0;
+            }
+        };
+
         const loadDashboard = async () => {
             try {
-                const [
-                    { count: totalBatches, error: e1 },
-                    { count: activeBatches, error: e2 },
-                    { data: recentBatchData, error: e3 },
-                    { count: fgItems, error: e4 },
-                    { data: rmData, error: e5 },
-                    { count: processingRuns, error: e6 },
-                    { count: b2bOrders, error: e7 },
-                    { count: b2bPending, error: e8 },
-                    { count: partnerOrders, error: e9 },
-                    { count: partnerPending, error: e10 },
-                ] = await Promise.all([
-                    supabase.from('batches').select('*', { count: 'exact', head: true }),
-                    supabase.from('batches').select('*', { count: 'exact', head: true }).in('status', ['CREATED', 'IN_PROCESS']),
-                    supabase.from('batches').select('id, batch_code, status, created_at').order('created_at', { ascending: false }).limit(5),
-                    supabase.from('finished_goods_inventory').select('*', { count: 'exact', head: true }),
-                    supabase.from('raw_material_inventory').select('quantity_kg'),
-                    supabase.from('processing_runs').select('*', { count: 'exact', head: true }),
-                    supabase.from('b2b_orders').select('*', { count: 'exact', head: true }),
-                    supabase.from('b2b_orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PENDING'),
-                    supabase.from('partner_orders').select('*', { count: 'exact', head: true }),
-                    supabase.from('partner_orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PENDING'),
+                // Core tables (schema.sql) — always available
+                const [totalBatches, activeBatches, fgItems] = await Promise.all([
+                    safeCount(supabase.from('batches').select('*', { count: 'exact', head: true })),
+                    safeCount(supabase.from('batches').select('*', { count: 'exact', head: true }).in('status', ['CREATED', 'IN_PROCESS'])),
+                    safeCount(supabase.from('finished_goods_inventory').select('*', { count: 'exact', head: true })),
                 ]);
 
-                const firstError = e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8 || e9 || e10;
-                if (firstError) throw new Error(firstError.message);
+                const { data: recentBatchData } = await supabase
+                    .from('batches')
+                    .select('id, batch_code, status, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                const { data: rmData } = await supabase
+                    .from('raw_material_inventory')
+                    .select('quantity_kg');
+                const rmStock = (rmData ?? []).reduce((sum: number, r: any) => sum + (Number(r.quantity_kg) || 0), 0);
+
+                // Extended tables (schema_v2.sql) — fail-safe if not yet applied
+                const [processingRuns, b2bOrders, b2bPending, partnerOrders, partnerPending] = await Promise.all([
+                    safeCount(supabase.from('processing_runs').select('*', { count: 'exact', head: true })),
+                    safeCount(supabase.from('b2b_orders').select('*', { count: 'exact', head: true })),
+                    safeCount(supabase.from('b2b_orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PENDING')),
+                    safeCount(supabase.from('partner_orders').select('*', { count: 'exact', head: true })),
+                    safeCount(supabase.from('partner_orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PENDING')),
+                ]);
 
                 setMetrics({
-                    totalBatches: totalBatches ?? 0,
-                    activeBatches: activeBatches ?? 0,
-                    fgItems: fgItems ?? 0,
-                    rmStock: (rmData ?? []).reduce((sum: number, r: any) => sum + (Number(r.quantity_kg) || 0), 0),
-                    processingRuns: processingRuns ?? 0,
-                    b2bOrders: b2bOrders ?? 0,
-                    partnerOrders: partnerOrders ?? 0,
-                    pendingOrders: (b2bPending ?? 0) + (partnerPending ?? 0),
+                    totalBatches,
+                    activeBatches,
+                    fgItems,
+                    rmStock,
+                    processingRuns,
+                    b2bOrders,
+                    partnerOrders,
+                    pendingOrders: b2bPending + partnerPending,
                 });
                 setRecentBatches(recentBatchData ?? []);
             } catch (err) {
