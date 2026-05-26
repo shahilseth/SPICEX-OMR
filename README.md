@@ -8,7 +8,7 @@
 
 ![SpiceX OMS Dashboard](./dashboard.png)
 
-Live Demo: https://frontend-67mgd7w26-shahil-seths-projects.vercel.app/dashboard
+Live Demo: https://spicex-oms.vercel.app/dashboard
 
 ---
 
@@ -50,7 +50,7 @@ The system provides full traceability from Farmer to Purchase Order to GRN to Ba
 | Backend | Supabase (PostgreSQL) |
 | Auth | Supabase Auth with RBAC |
 | ORM | supabase-js |
-| Deployment | Vercel (Frontend), Supabase Cloud (DB) |
+| Deployment | Vercel (Frontend + Backend), Supabase Cloud (DB) |
 
 ---
 
