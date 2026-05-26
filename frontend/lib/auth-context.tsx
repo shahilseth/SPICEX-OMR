@@ -87,7 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // Race against a 8s timeout so a paused/unreachable Supabase project
+        // doesn't leave the app stuck on the loading spinner forever.
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Auth timeout — Supabase may be paused')), 8000)
+          ),
+        ]);
+
+        const initialSession = (sessionResult as any)?.data?.session ?? null;
 
         if (initialSession?.user) {
           setUser(initialSession.user);
