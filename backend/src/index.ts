@@ -8,7 +8,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    /\.vercel\.app$/,
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 app.use(express.json());
 
 app.get("/health", (req, res) => {
@@ -827,12 +835,17 @@ app.post("/api/calculate-partner-price", async (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`
+// Export app for Vercel serverless. Only call listen() in local dev.
+export default app;
+
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`
 ====================================
      SPICEX OMS Backend Running
 ====================================
 Server running on port ${PORT}
 REST API is ready.
 `);
-});
+  });
+}
